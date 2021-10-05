@@ -29,12 +29,12 @@ namespace WorkshopCollectionChecker
             Console.WriteLine("Gathering addons list from workshop collection: " + workshopId);
             var addonIds = GetCollectionMembers(workshopId);
 
-            var conflicts = GetSettingList("ConflictIds").ToList();
+            var conflicts = GetSettingDictionary("Conflicts");
             foreach (var addonId in addonIds)
             {
-                if (conflicts.Contains(addonId))
+                if (conflicts.ContainsKey(addonId))
                 {
-                    Console.Error.WriteLine("Conflict found: " + addonId);
+                    Console.Error.WriteLine($"Conflict found: {conflicts[addonId]} ({addonId})");
                 }
             }
             Console.WriteLine("Done!");
@@ -66,7 +66,8 @@ namespace WorkshopCollectionChecker
             Console.ReadKey();
         }
 
-        private static IEnumerable<string> GetSettingList(string setting)
-            => configuration[setting].Split(';', ',', '|').ToList();
+        private static Dictionary<string, string> GetSettingDictionary(string setting)
+            => configuration.GetSection(setting).GetChildren()
+                            .ToDictionary(x => x.Key, x => x.Value);
     }
 }
