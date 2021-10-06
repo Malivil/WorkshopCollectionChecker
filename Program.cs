@@ -16,8 +16,15 @@ namespace WorkshopCollectionChecker
         {
             if (args.Length < 1)
             {
-                PrintAndPause($"USAGE: {Assembly.GetExecutingAssembly().GetName().Name} workshop_id");
+                PrintAndPause($"USAGE: {Assembly.GetExecutingAssembly().GetName().Name} workshop_id [conflict_list]");
                 return;
+            }
+
+            // Use whichever list is provided, or the default
+            var conflictList = "Conflicts";
+            if (args.Length >= 2)
+            {
+                conflictList = args[1];
             }
 
             var builder = new ConfigurationBuilder()
@@ -29,7 +36,7 @@ namespace WorkshopCollectionChecker
             Console.WriteLine("Gathering addons list from workshop collection: " + workshopId);
             var addonIds = GetCollectionMembers(workshopId);
 
-            var conflicts = GetSettingDictionary("Conflicts");
+            var conflicts = GetSettingDictionary(conflictList);
             foreach (var addonId in addonIds)
             {
                 if (conflicts.ContainsKey(addonId))
