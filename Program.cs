@@ -21,7 +21,7 @@ namespace WorkshopCollectionChecker
             }
 
             // Use whichever list is provided, or the default
-            var conflictList = "Conflicts";
+            var conflictList = "CustomRoles";
             if (args.Length >= 2)
             {
                 conflictList = args[1];
@@ -36,15 +36,33 @@ namespace WorkshopCollectionChecker
             Console.WriteLine("Gathering addons list from workshop collection: " + workshopId);
             var addonIds = GetCollectionMembers(workshopId);
 
+            if (conflictList.ToLower() == "all")
+            {
+                foreach (var section in configuration.GetChildren())
+                {
+                    Console.WriteLine($"Checking for conflicts in {section.Key} list");
+                    CheckForConflicts(addonIds, section.Key);
+                }
+            }
+            else
+            {
+                Console.WriteLine($"Checking for conflicts in {conflictList} list");
+                CheckForConflicts(addonIds, conflictList);
+            }
+
+            Console.WriteLine("Done!");
+        }
+
+        private static void CheckForConflicts(IEnumerable<string> addonIds, string conflictList)
+        {
             var conflicts = GetSettingDictionary(conflictList);
             foreach (var addonId in addonIds)
             {
                 if (conflicts.ContainsKey(addonId))
                 {
-                    Console.Error.WriteLine($"Conflict found: {conflicts[addonId]} ({addonId})");
+                    PrintError($"Conflict found: {conflicts[addonId]} ({addonId})");
                 }
             }
-            Console.WriteLine("Done!");
         }
 
         private static IList<string> GetCollectionMembers(string collectionId)
@@ -65,6 +83,13 @@ namespace WorkshopCollectionChecker
             Console.WriteLine($"Found {addonIds.Count} collection items");
 
             return addonIds;
+        }
+
+        private static void PrintError(string message)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.Error.WriteLine(message);
+            Console.ForegroundColor = ConsoleColor.White;
         }
 
         private static void PrintAndPause(string msg)
