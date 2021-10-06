@@ -21,7 +21,7 @@ namespace WorkshopCollectionChecker
             }
 
             // Use whichever list is provided, or the default
-            var conflictList = "CustomRoles";
+            var conflictList = "All";
             if (args.Length >= 2)
             {
                 conflictList = args[1];
