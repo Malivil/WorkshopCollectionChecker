@@ -89,7 +89,7 @@ namespace WorkshopCollectionChecker
         {
             Console.ForegroundColor = ConsoleColor.Red;
             Console.Error.WriteLine(message);
-            Console.ForegroundColor = ConsoleColor.White;
+            Console.ForegroundColor = ConsoleColor.Gray;
         }
 
         private static void PrintAndPause(string msg)
