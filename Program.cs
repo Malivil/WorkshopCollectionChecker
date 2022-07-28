@@ -11,6 +11,8 @@ namespace WorkshopCollectionChecker
     public class Program
     {
         private static IConfiguration configuration;
+        private const string AlternativesKey = "Alternatives";
+        private const string SharedAlternativeKey = "Alternative";
 
         public static void Main(string[] args)
         {
@@ -35,25 +37,28 @@ namespace WorkshopCollectionChecker
             var workshopId = args[0];
             Console.WriteLine("Gathering addons list from workshop collection: " + workshopId);
             var addonIds = GetCollectionMembers(workshopId);
+            var alternatives = GetSettingDictionary(AlternativesKey);
 
             if (conflictList.ToLower() == "all")
             {
-                foreach (var section in configuration.GetChildren())
+                foreach (var section in configuration.GetChildren().Where(s => s.Key != AlternativesKey && !s.Key.EndsWith(SharedAlternativeKey)))
                 {
                     Console.WriteLine($"Checking for conflicts in {section.Key} list");
-                    CheckForConflicts(addonIds, section.Key);
+                    string sharedAlternative = configuration.GetSection(section.Key + SharedAlternativeKey)?.Value;
+                    CheckForConflicts(addonIds, section.Key, alternatives, sharedAlternative);
                 }
             }
             else
             {
                 Console.WriteLine($"Checking for conflicts in {conflictList} list");
-                CheckForConflicts(addonIds, conflictList);
+                string sharedAlternative = configuration.GetSection(conflictList + SharedAlternativeKey)?.Value;
+                CheckForConflicts(addonIds, conflictList, alternatives, sharedAlternative);
             }
 
             Console.WriteLine("Done!");
         }
 
-        private static void CheckForConflicts(IEnumerable<string> addonIds, string conflictList)
+        private static void CheckForConflicts(IEnumerable<string> addonIds, string conflictList, IDictionary<string, string> alternatives, string sharedAlternative)
         {
             var conflicts = GetSettingDictionary(conflictList);
             foreach (var addonId in addonIds)
@@ -61,6 +66,14 @@ namespace WorkshopCollectionChecker
                 if (conflicts.ContainsKey(addonId))
                 {
                     PrintError($"Conflict found: {conflicts[addonId]} ({addonId})");
+                    if (alternatives.ContainsKey(addonId))
+                    {
+                        PrintError($"Alternative: {alternatives[addonId]}");
+                    }
+                    else if (!string.IsNullOrWhiteSpace(sharedAlternative))
+                    {
+                        PrintError($"Alternative: {sharedAlternative}");
+                    }
                 }
             }
         }
