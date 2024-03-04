@@ -1,8 +1,8 @@
 {
   "profiles": {
-    "WorkshopCollectionDownloader": {
+    "WorkshopCollectionChecker": {
       "commandName": "Project",
-      "commandLineArgs": "2281950965 All"
+      "commandLineArgs": "3097751372 All"
     }
   }
 }

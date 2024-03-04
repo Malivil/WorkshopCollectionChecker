@@ -12,7 +12,10 @@ namespace WorkshopCollectionChecker
     {
         private static IConfiguration configuration;
         private const string AlternativesKey = "Alternatives";
+        private const string ConVarsKey = "ConVars";
         private const string SharedAlternativeKey = "Alternative";
+
+        private static readonly string[] ExcludedSections = [AlternativesKey, ConVarsKey];
 
         public static void Main(string[] args)
         {
@@ -39,9 +42,9 @@ namespace WorkshopCollectionChecker
             var addonIds = GetCollectionMembers(workshopId);
             var alternatives = GetSettingDictionary(AlternativesKey);
 
-            if (conflictList.ToLower() == "all")
+            if (conflictList.Equals("all", StringComparison.InvariantCultureIgnoreCase))
             {
-                foreach (var section in configuration.GetChildren().Where(s => s.Key != AlternativesKey && !s.Key.EndsWith(SharedAlternativeKey)))
+                foreach (var section in configuration.GetChildren().Where(s => !ExcludedSections.Contains(s.Key) && !s.Key.EndsWith(SharedAlternativeKey)))
                 {
                     Console.WriteLine($"Checking for conflicts in {section.Key} list");
                     string sharedAlternative = configuration.GetSection(section.Key + SharedAlternativeKey)?.Value;
@@ -55,30 +58,62 @@ namespace WorkshopCollectionChecker
                 CheckForConflicts(addonIds, conflictList, alternatives, sharedAlternative);
             }
 
+            Console.WriteLine($"Checking for conflicts in {ConVarsKey} list");
+            CheckForConVarConflicts(addonIds);
+
             Console.WriteLine("Done!");
         }
 
-        private static void CheckForConflicts(IEnumerable<string> addonIds, string conflictList, IDictionary<string, string> alternatives, string sharedAlternative)
+        private static void CheckForConflicts(IEnumerable<string> addonIds, string conflictList, Dictionary<string, string> alternatives, string sharedAlternative)
         {
             var conflicts = GetSettingDictionary(conflictList);
             foreach (var addonId in addonIds)
             {
-                if (conflicts.ContainsKey(addonId))
+                if (!conflicts.TryGetValue(addonId, out var conflict))
                 {
-                    PrintError($"Conflict found: {conflicts[addonId]} ({addonId})");
-                    if (alternatives.ContainsKey(addonId))
+                    continue;
+                }
+
+                PrintError($"Conflict found: {conflict} ({addonId})");
+                if (alternatives.TryGetValue(addonId, out var alternative))
+                {
+                    PrintError($"\tAlternative: {alternative}");
+                }
+                else if (!string.IsNullOrWhiteSpace(sharedAlternative))
+                {
+                    PrintError($"\tAlternative: {sharedAlternative}");
+                }
+            }
+        }
+
+        private static void CheckForConVarConflicts(List<string> addonIds)
+        {
+            var convarsSection = configuration.GetSection(ConVarsKey);
+            var convarsChildren = convarsSection.GetChildren();
+            foreach (var convarChild in convarsChildren)
+            {
+                if (!addonIds.Contains(convarChild.Key))
+                {
+                    continue;
+                }
+
+                var conflicts = new ConVarConflicts();
+                convarChild.Bind(conflicts);
+
+                PrintWarning($"Potential conflict found: {conflicts.AddonName} ({convarChild.Key})");
+
+                foreach (var conflict in conflicts.Conflicts)
+                {
+                    PrintWarning($"\tIf '{conflict.Name}' is set to '{conflict.Value}' then it can cause issues");
+                    if (!string.IsNullOrWhiteSpace(conflict.Alternative))
                     {
-                        PrintError($"Alternative: {alternatives[addonId]}");
-                    }
-                    else if (!string.IsNullOrWhiteSpace(sharedAlternative))
-                    {
-                        PrintError($"Alternative: {sharedAlternative}");
+                        PrintWarning($"\tAlternative: {conflict.Alternative}");
                     }
                 }
             }
         }
 
-        private static IList<string> GetCollectionMembers(string collectionId)
+        private static List<string> GetCollectionMembers(string collectionId)
         {
             var url = $"https://steamcommunity.com/sharedfiles/filedetails/?id={collectionId}";
             var web = new HtmlWeb();
@@ -102,6 +137,13 @@ namespace WorkshopCollectionChecker
         {
             Console.ForegroundColor = ConsoleColor.Red;
             Console.Error.WriteLine(message);
+            Console.ForegroundColor = ConsoleColor.Gray;
+        }
+
+        private static void PrintWarning(string message)
+        {
+            Console.ForegroundColor = ConsoleColor.DarkYellow;
+            Console.WriteLine(message);
             Console.ForegroundColor = ConsoleColor.Gray;
         }
 
