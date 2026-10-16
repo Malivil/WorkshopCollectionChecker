@@ -34,7 +34,7 @@ namespace WorkshopCollectionChecker
 
             var builder = new ConfigurationBuilder()
                           .SetBasePath(AppContext.BaseDirectory)
-                          .AddJsonFile("appSettings.json", true, true);
+                          .AddJsonFile("appsettings.json", true, true);
             configuration = builder.Build();
 
             var workshopId = args[0];
